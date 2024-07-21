@@ -51,8 +51,8 @@ object APIClient {
     }
 
     private var wsConnection: DefaultClientWebSocketSession? = null
-    //Is this the right way to do this?
-    public lateinit var user: String
+    //TODO: Is this the right way to do this?
+    lateinit var user: String
 
     suspend fun getWebsocket(id: String) =
         wsConnection ?: client.webSocketSession("$WS_URL/$id") {

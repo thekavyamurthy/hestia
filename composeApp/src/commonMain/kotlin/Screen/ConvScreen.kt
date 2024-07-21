@@ -26,8 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.composegears.tiamat.NavController
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
-import hestia.composeapp.generated.resources.Res
-import hestia.composeapp.generated.resources.gnomey
+import gnomey
 import org.jetbrains.compose.resources.painterResource
 
 val ConvScreen by navDestination<Unit> {
@@ -51,7 +50,7 @@ val ConvScreen by navDestination<Unit> {
 fun ConvCard(name: String, navController: NavController) {
     Row (Modifier.padding(20.dp).clickable { navController.replace(ChatScreen, ChatParams(name)) }){
         Image(
-            painter = painterResource(Res.drawable.gnomey),
+            painter = painterResource(gnomey),
             contentDescription = "gnomey",
             contentScale = ContentScale.Crop,
             modifier = Modifier

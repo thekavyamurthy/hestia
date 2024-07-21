@@ -35,7 +35,10 @@ kotlin {
     iosSimulatorArm64()
     
     jvm()
-    
+
+    task("testClasses")
+
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)

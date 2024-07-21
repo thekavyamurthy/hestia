@@ -37,15 +37,13 @@ val ChatScreen by navDestination<ChatParams> {
     val id = navArgs().id
 
     Column {
-        val jsonRepose = remember { mutableStateOf("") }
         val scope = rememberCoroutineScope()
-        val showLoading by remember { mutableStateOf(false) }
         var msgInput by remember { mutableStateOf("") }
         val msgList = remember { mutableStateListOf<Message>() }
 
         LaunchedEffect(Unit) {
             val messages = APIClient.getConversation(id)
-            messages.forEach() { msgList.add(it) }
+            messages.forEach { msgList.add(it) }
             println(msgList)
             try {
                 while (true) {

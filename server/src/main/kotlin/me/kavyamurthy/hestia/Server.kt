@@ -36,6 +36,7 @@ import io.ktor.server.websocket.sendSerialized
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import java.time.Duration
 import java.time.Instant
@@ -50,6 +51,7 @@ fun main() {
         .start(wait = true)
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 fun Application.module() {
     install(WebSockets) {
         pingPeriod = Duration.ofSeconds(15)

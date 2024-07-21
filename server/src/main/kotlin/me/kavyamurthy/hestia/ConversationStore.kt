@@ -21,12 +21,14 @@ class ConversationStore(user: String) {
     fun listConversations(): ArrayList<String> {
         val convArray = userDir.listFiles()
         val convList = ArrayList<String>()
-        repeat(convArray.size) {i ->
-            if(convArray[i].name.endsWith(".conv")) {
-                convList.add(convArray[i].name.dropLast(5))
+        if(convArray != null) {
+            repeat(convArray.size) { i ->
+                if (convArray[i].name.endsWith(".conv")) {
+                    convList.add(convArray[i].name.dropLast(5))
+                }
             }
+            println(convList)
         }
-        println(convList)
         return convList
     }
 
