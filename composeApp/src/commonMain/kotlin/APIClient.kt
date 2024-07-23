@@ -54,7 +54,7 @@ object APIClient {
     //TODO: Is this the right way to do this?
     lateinit var user: String
 
-    suspend fun getWebsocket(id: String) =
+    suspend fun getWebsocket(id: Int) =
         wsConnection ?: client.webSocketSession("$WS_URL/$id") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")
@@ -69,7 +69,7 @@ object APIClient {
         val loginResponse = resp.body<LoginResponse>()
         return if (resp.status == HttpStatusCode.OK) {
             authToken = loginResponse.token
-            user = username
+            user = loginResponse.displayName
             true
         } else {
             authToken = ""
@@ -77,7 +77,7 @@ object APIClient {
         }
     }
 
-    suspend fun listConversations(): ArrayList<String> {
+    suspend fun listConversations(): ArrayList<Conversation> {
         val response = client.get("$API_URL/api/conversations") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")
@@ -86,7 +86,7 @@ object APIClient {
         return response.body()
     }
 
-    suspend fun getConversation(id: String): ArrayList<Message> {
+    suspend fun getConversation(id: Int): ArrayList<Message> {
         val response = client.get("$API_URL/api/conversation/$id") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")

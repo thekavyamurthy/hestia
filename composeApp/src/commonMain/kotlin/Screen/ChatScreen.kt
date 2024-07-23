@@ -30,11 +30,13 @@ import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
-data class ChatParams(val id: String)
+data class ChatParams(val id: Int, val name: String)
 
 val ChatScreen by navDestination<ChatParams> {
     val id = navArgs().id
+    val name = navArgs().name
 
     Column {
         val scope = rememberCoroutineScope()
@@ -70,7 +72,7 @@ val ChatScreen by navDestination<ChatParams> {
 
             Button(modifier = Modifier.width(200.dp).padding(10.dp),
                 onClick = {
-                    val msg = Message(APIClient.user, id, msgInput)
+                    val msg = Message(0, APIClient.user, id, name, msgInput, Clock.System.now().epochSeconds)
                     msgList.add(msg)
                     scope.launch {
                         APIClient.getWebsocket(id).sendSerialized(msg)

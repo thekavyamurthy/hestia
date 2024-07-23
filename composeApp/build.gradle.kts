@@ -70,12 +70,14 @@ kotlin {
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(compose.components.resources)
-
+            implementation(libs.kotlinx.datetime)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
         }
     }
+
+    task("testClasses")
 }
 
 android {

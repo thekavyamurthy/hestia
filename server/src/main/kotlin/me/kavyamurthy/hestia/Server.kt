@@ -38,15 +38,19 @@ import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import me.kavyamurthy.hestia.db.DirectMessages
+import me.kavyamurthy.hestia.db.Users.login
+import org.jetbrains.exposed.sql.Database
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Collections
 
-const val SECRET = "e42f5b73-f53d-428b-8fc0-98ac06e555db"
 
 
 fun main() {
+    Database.connect(DB_URL, user = DB_USERNAME, password = DB_PASSWORD)
+
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
@@ -94,13 +98,14 @@ fun Application.module() {
 
         post("/api/login") {
             val loginRequest = call.receive<LoginRequest>()
-            println(loginRequest)
-            if (loginRequest.username == loginRequest.password) {
+            val user = login(loginRequest.username, hashPassword(loginRequest.password))
+            if (user != null) {
+                println("Login success $user")
                 val token = JWT.create()
-                    .withClaim("username", loginRequest.username)
+                    .withClaim("userId", user.id)
                     .withExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
                     .sign(Algorithm.HMAC256(SECRET))
-                call.respond(LoginResponse(token))
+                call.respond(LoginResponse(token, user.displayName ?: user.firstName))
             } else {
                 call.respond(HttpStatusCode.Forbidden)
             }
@@ -109,52 +114,48 @@ fun Application.module() {
         authenticate ("auth-jwt") {
             get("/api/conversations") {
                 val principal = call.principal<JWTPrincipal>()
-                val user = principal!!.payload.getClaim("username").asString()
-                val convList = ConversationStore(user).listConversations()
+                val userId = principal!!.payload.getClaim("userId").asInt()
+                val convList = DirectMessages.getConvList(userId)
                 call.respond(convList)
             }
 
             get("/api/conversation/{id}") {
                 val principal = call.principal<JWTPrincipal>()
-                val user = principal!!.payload.getClaim("username").asString()
-                val id = call.parameters["id"]
+                val userId = principal!!.payload.getClaim("userId").asInt()
+                val id = call.parameters["id"]?.toInt()
                 if (id == null) {
                     call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
                 } else {
-                    val conv = ConversationStore(user).getConversation(id)
-                    call.respond(conv.getMessages())
+                    call.respond(DirectMessages.getConversation(userId, id))
                 }
             }
 
             webSocket("/chat/{id}") {
                 val principal = call.principal<JWTPrincipal>()
-                val user = principal!!.payload.getClaim("username").asString()
-                val thisConnection = Connection(this, user)
+                val userId = principal!!.payload.getClaim("userId").asInt()
+                val thisConnection = Connection(this, userId)
                 connections += thisConnection
                 val id = call.parameters["id"]
-                lateinit var conv: ConversationStore.Conversation
 
                 if (id == null) {
                     call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
                 } else {
-                    conv = ConversationStore(user).getConversation(id)
-                }
-
-                try {
-                    while(true) {
-                        val msg = receiveDeserialized<Message>()
-                        connections.forEach {
-                            if (msg.to == it.user)
-                                (it.session as WebSocketServerSession).sendSerialized(msg)
-                            conv.addMessage(msg)
+                    try {
+                        while (true) {
+                            val msg = receiveDeserialized<Message>()
+                            connections.forEach {
+                                if (msg.toId == it.userId)
+                                    (it.session as WebSocketServerSession).sendSerialized(msg)
+                                DirectMessages.add(userId, msg)
+                            }
                         }
+                    } catch (_: ClosedReceiveChannelException) {
+                    } catch (e: Exception) {
+                        println(e.localizedMessage)
+                    } finally {
+                        println("removing connection")
+                        connections -= thisConnection
                     }
-                } catch (_: ClosedReceiveChannelException) {
-                } catch (e: Exception) {
-                    println(e.localizedMessage)
-                } finally {
-                    println("removing connection")
-                    connections -= thisConnection
                 }
             }
         }

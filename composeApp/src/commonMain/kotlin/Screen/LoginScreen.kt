@@ -33,7 +33,7 @@ val LoginScreen by navDestination<Unit> {
         verticalArrangement = Arrangement.Center
     ) {
 
-        var username by remember { mutableStateOf("kavya") }
+        var username by remember { mutableStateOf("thekavyamurthy@gmail.com") }
         var password by remember { mutableStateOf("kavya") }
         val scope = rememberCoroutineScope()
 //        val context = LocalContext.current;

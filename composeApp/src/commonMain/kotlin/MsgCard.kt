@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 fun MsgCard(msg: Message) {
     Text(
         modifier = Modifier.fillMaxWidth().padding(all = 10.dp),
-        text = "${msg.from}: ${msg.body}",
+        text = "${msg.fromName}: ${msg.body}",
         fontFamily = FontFamily.Monospace
     )
 }

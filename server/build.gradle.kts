@@ -23,7 +23,14 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.jackson.databind)
     implementation(libs.ktor.server.call.logging)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.kotlin.datetime)
+    implementation(libs.exposed.dao)
+    implementation(libs.postgresql)
+    implementation(libs.lz4.java)
+
+
     testImplementation(libs.ktor.server.tests)
     testImplementation(libs.kotlin.test.junit)
-
 }

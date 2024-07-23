@@ -1,6 +1,7 @@
 package Screen
 
 import APIClient
+import Conversation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -26,13 +27,14 @@ import androidx.compose.ui.unit.sp
 import com.composegears.tiamat.NavController
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
-import gnomey
+import hestia.composeapp.generated.resources.Res
+import hestia.composeapp.generated.resources.gnomey
 import org.jetbrains.compose.resources.painterResource
 
 val ConvScreen by navDestination<Unit> {
     val navController = navController()
 
-    var convList by remember { mutableStateOf(ArrayList<String>()) }
+    var convList by remember { mutableStateOf(ArrayList<Conversation>()) }
 
     LaunchedEffect(Unit) {
         convList = APIClient.listConversations()
@@ -41,16 +43,16 @@ val ConvScreen by navDestination<Unit> {
     Column {
         Spacer(Modifier.height(10.dp))
         convList.forEach {
-            ConvCard(it, navController)
+            ConvCard(it.id, it.name, navController)
         }
     }
 }
 
 @Composable
-fun ConvCard(name: String, navController: NavController) {
-    Row (Modifier.padding(20.dp).clickable { navController.replace(ChatScreen, ChatParams(name)) }){
+fun ConvCard(id: Int, name: String, navController: NavController) {
+    Row (Modifier.padding(20.dp).clickable { navController.replace(ChatScreen, ChatParams(id, name)) }){
         Image(
-            painter = painterResource(gnomey),
+            painter = painterResource(Res.drawable.gnomey),
             contentDescription = "gnomey",
             contentScale = ContentScale.Crop,
             modifier = Modifier
