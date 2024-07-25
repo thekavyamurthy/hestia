@@ -5,7 +5,6 @@ import LoginResponse
 import Message
 import SERVER_PORT
 import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
@@ -38,6 +37,8 @@ import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import me.kavyamurthy.hestia.db.ConversationMembers
+import me.kavyamurthy.hestia.db.Conversations
 import me.kavyamurthy.hestia.db.DirectMessages
 import me.kavyamurthy.hestia.db.Users.login
 import org.jetbrains.exposed.sql.Database
@@ -49,7 +50,7 @@ import java.util.Collections
 
 
 fun main() {
-    Database.connect(DB_URL, user = DB_USERNAME, password = DB_PASSWORD)
+    Database.connect(config.db.url, user = config.db.username, password = config.db.password)
 
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
@@ -76,7 +77,7 @@ fun Application.module() {
     }
     install(Authentication) {
         jwt("auth-jwt") {
-            verifier(JWT.require(Algorithm.HMAC256(SECRET)).build())
+            verifier(JWT.require(jwtAlgorithm).build())
             validate { credential ->
                 if (credential.payload.getClaim("username").asString() != "") {
                     JWTPrincipal(credential.payload)
@@ -104,7 +105,7 @@ fun Application.module() {
                 val token = JWT.create()
                     .withClaim("userId", user.id)
                     .withExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
-                    .sign(Algorithm.HMAC256(SECRET))
+                    .sign(jwtAlgorithm)
                 call.respond(LoginResponse(token, user.displayName ?: user.firstName))
             } else {
                 call.respond(HttpStatusCode.Forbidden)
@@ -115,18 +116,18 @@ fun Application.module() {
             get("/api/conversations") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.getClaim("userId").asInt()
-                val convList = DirectMessages.getConvList(userId)
+                val convList = Conversations.getConvList(userId)
                 call.respond(convList)
             }
 
             get("/api/conversation/{id}") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.getClaim("userId").asInt()
-                val id = call.parameters["id"]?.toInt()
+                val id = call.parameters["id"]?.toLong()
                 if (id == null) {
                     call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
                 } else {
-                    call.respond(DirectMessages.getConversation(userId, id))
+                    call.respond(DirectMessages.getMessages(id))
                 }
             }
 
@@ -135,16 +136,19 @@ fun Application.module() {
                 val userId = principal!!.payload.getClaim("userId").asInt()
                 val thisConnection = Connection(this, userId)
                 connections += thisConnection
-                val id = call.parameters["id"]
+                val convId = call.parameters["id"]?.toLong()
 
-                if (id == null) {
+                if (convId == null) {
                     call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
                 } else {
+                    val userList = ConversationMembers.getMembers(convId).toMutableSet()
+                    userList.remove(userId)
+
                     try {
                         while (true) {
                             val msg = receiveDeserialized<Message>()
                             connections.forEach {
-                                if (msg.toId == it.userId)
+                                if (it.userId in userList)
                                     (it.session as WebSocketServerSession).sendSerialized(msg)
                                 DirectMessages.add(userId, msg)
                             }

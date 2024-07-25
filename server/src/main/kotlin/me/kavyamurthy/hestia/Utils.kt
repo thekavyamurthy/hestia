@@ -1,17 +1,26 @@
 package me.kavyamurthy.hestia
 
+import com.auth0.jwt.algorithms.Algorithm
+import com.sksamuel.hoplite.ConfigLoaderBuilder
+import com.sksamuel.hoplite.addResourceSource
 import net.jpountz.xxhash.XXHashFactory
 
 private val xxHash32 = XXHashFactory.fastestInstance().hash32()
-private const val SALT = "gf7ik7m\$&aP#Mm"
-private const val SEED = 0xBE548D
-const val SECRET = "e42f5b73-f53d-428b-8fc0-98ac06e555db"
-private const val DB_HOST = "db.czeu8uqce7rf.us-east-2.rds.amazonaws.com" //localhost
-const val DB_URL = "jdbc:postgresql://$DB_HOST:5432/postgres"
-const val DB_USERNAME = "postgres" //kavyamurthy
-const val DB_PASSWORD = "UVWdwh24j8r9k6" // [blank]
+
+data class DBConfig(val username: String, val password: String, val url: String)
+data class AuthConfig(val salt: String, val seed: Int)
+data class JWTConfig(val secret: String)
+data class Config(val db: DBConfig, val auth: AuthConfig, val jwt: JWTConfig)
+
+val config = ConfigLoaderBuilder.default()
+    .addResourceSource("/hestia-dev.yaml", true, true)
+    .addResourceSource("/hestia.yaml")
+    .build()
+    .loadConfigOrThrow<Config>()
+
+val jwtAlgorithm: Algorithm = Algorithm.HMAC256(config.jwt.secret)
 
 fun hashPassword(password: String): Int {
-    val passwordBytes = (password + SALT).toByteArray()
-    return xxHash32.hash(passwordBytes, 0, passwordBytes.size, SEED)
+    val passwordBytes = (password + config.auth.salt).toByteArray()
+    return xxHash32.hash(passwordBytes, 0, passwordBytes.size, config.auth.seed)
 }

@@ -32,7 +32,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
-data class ChatParams(val id: Int, val name: String)
+data class ChatParams(val id: Long, val name: String)
 
 val ChatScreen by navDestination<ChatParams> {
     val id = navArgs().id
@@ -72,7 +72,7 @@ val ChatScreen by navDestination<ChatParams> {
 
             Button(modifier = Modifier.width(200.dp).padding(10.dp),
                 onClick = {
-                    val msg = Message(0, APIClient.user, id, name, msgInput, Clock.System.now().epochSeconds)
+                    val msg = Message(0, APIClient.user, id, msgInput, Clock.System.now().epochSeconds)
                     msgList.add(msg)
                     scope.launch {
                         APIClient.getWebsocket(id).sendSerialized(msg)

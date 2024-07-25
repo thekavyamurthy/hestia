@@ -2,12 +2,14 @@ plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
     application
+    distribution
 }
 
 group = "me.kavyamurthy.hestia"
 version = "1.0.0"
+
 application {
-    mainClass.set("me.kavyamurthy.hestia.ApplicationKt")
+    mainClass.set("me.kavyamurthy.hestia.ServerKt")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=${extra["io.ktor.development"] ?: "false"}")
 }
 
@@ -29,8 +31,13 @@ dependencies {
     implementation(libs.exposed.dao)
     implementation(libs.postgresql)
     implementation(libs.lz4.java)
+    implementation(libs.hoplite.yaml)
 
 
     testImplementation(libs.ktor.server.tests)
     testImplementation(libs.kotlin.test.junit)
+}
+
+tasks.withType<Jar> {
+    exclude("hestia-dev.yaml")
 }

@@ -21,7 +21,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object APIClient {
-    private const val SERVER = "192.168.0.188:8080" //10.0.0.125:8080, 192.168.0.148:8080, 192.168.0.130:8080
+    private const val SERVER = "3.139.180.238:8080" //192.168.0.188
     private const val WS_URL = "ws://$SERVER/chat"
     private const val API_URL = "http://$SERVER"
 
@@ -54,7 +54,7 @@ object APIClient {
     //TODO: Is this the right way to do this?
     lateinit var user: String
 
-    suspend fun getWebsocket(id: Int) =
+    suspend fun getWebsocket(id: Long) =
         wsConnection ?: client.webSocketSession("$WS_URL/$id") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")
@@ -86,7 +86,7 @@ object APIClient {
         return response.body()
     }
 
-    suspend fun getConversation(id: Int): ArrayList<Message> {
+    suspend fun getConversation(id: Long): ArrayList<Message> {
         val response = client.get("$API_URL/api/conversation/$id") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")
