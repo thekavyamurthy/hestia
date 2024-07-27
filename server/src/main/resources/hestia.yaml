@@ -7,5 +7,6 @@ auth:
   salt: gf7ik7m$&aP#Mm
   seed: 12473485
 
-jwt:
+server:
   secret: e42f5b73-f53d-428b-8fc0-98ac06e555db
+  port: 8080

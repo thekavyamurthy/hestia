@@ -2,4 +2,3 @@ db:
   username: kavyamurthy
   password:
   url: jdbc:postgresql://localhost:5432/postgres
-

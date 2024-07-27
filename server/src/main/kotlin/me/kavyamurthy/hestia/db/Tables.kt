@@ -98,6 +98,7 @@ object DirectMessages : Table("hestia.direct_messages") {
         DirectMessages.innerJoin(Users)
             .select(fromUser, fromName, DirectMessages.convId, message, timestamp)
             .where { DirectMessages.convId eq convId }
+            .orderBy(timestamp)
             .toList()
             .map { Message(it[fromUser], it[fromName], it[DirectMessages.convId], it[message], it[timestamp].epochSeconds) }
     }

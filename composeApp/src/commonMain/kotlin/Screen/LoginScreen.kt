@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
@@ -46,7 +47,11 @@ val LoginScreen by navDestination<Unit> {
         }
 
         Row {
-            TextField(value = password, onValueChange = { password = it }, Modifier.padding(10.dp), placeholder = { Text("Enter your password") })
+            TextField(value = password,
+                visualTransformation = PasswordVisualTransformation(),
+                onValueChange = { password = it },
+                modifier = Modifier.padding(10.dp),
+                placeholder = { Text("Enter your password") })
         }
 
         Row {

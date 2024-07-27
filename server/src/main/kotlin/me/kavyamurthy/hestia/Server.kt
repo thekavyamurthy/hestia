@@ -3,9 +3,7 @@ package me.kavyamurthy.hestia
 import LoginRequest
 import LoginResponse
 import Message
-import SERVER_PORT
 import com.auth0.jwt.JWT
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
@@ -18,12 +16,12 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.auth.principal
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -52,7 +50,7 @@ import java.util.Collections
 fun main() {
     Database.connect(config.db.url, user = config.db.username, password = config.db.password)
 
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
+    embeddedServer(Netty, port = config.server.port, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
@@ -93,9 +91,8 @@ fun Application.module() {
 
     routing {
         val connections = Collections.synchronizedSet<Connection?>(LinkedHashSet())
-        get("/") {
-            call.respondText("Test", ContentType.Text.Plain)
-        }
+
+        staticResources("/", "website", index = "index.html")
 
         post("/api/login") {
             val loginRequest = call.receive<LoginRequest>()

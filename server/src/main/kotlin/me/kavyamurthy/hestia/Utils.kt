@@ -9,8 +9,8 @@ private val xxHash32 = XXHashFactory.fastestInstance().hash32()
 
 data class DBConfig(val username: String, val password: String, val url: String)
 data class AuthConfig(val salt: String, val seed: Int)
-data class JWTConfig(val secret: String)
-data class Config(val db: DBConfig, val auth: AuthConfig, val jwt: JWTConfig)
+data class ServerConfig(val secret: String, val port: Int)
+data class Config(val db: DBConfig, val auth: AuthConfig, val server: ServerConfig)
 
 val config = ConfigLoaderBuilder.default()
     .addResourceSource("/hestia-dev.yaml", true, true)
@@ -18,7 +18,7 @@ val config = ConfigLoaderBuilder.default()
     .build()
     .loadConfigOrThrow<Config>()
 
-val jwtAlgorithm: Algorithm = Algorithm.HMAC256(config.jwt.secret)
+val jwtAlgorithm: Algorithm = Algorithm.HMAC256(config.server.secret)
 
 fun hashPassword(password: String): Int {
     val passwordBytes = (password + config.auth.salt).toByteArray()

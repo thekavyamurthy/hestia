@@ -21,7 +21,8 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object APIClient {
-    private const val SERVER = "3.139.180.238:8080" //192.168.0.188
+    private const val SERVER = "hestia.fun"
+//    private const val SERVER = "192.168.0.188:8080"
     private const val WS_URL = "ws://$SERVER/chat"
     private const val API_URL = "http://$SERVER"
 
