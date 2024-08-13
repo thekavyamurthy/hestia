@@ -3,9 +3,9 @@ package Screen
 import APIClient
 import Message
 import MsgCard
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,7 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.composegears.tiamat.navArgs
 import com.composegears.tiamat.navDestination
 import io.ktor.client.plugins.websocket.receiveDeserialized
@@ -58,10 +61,12 @@ val ChatScreen by navDestination<ChatParams> {
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().background(color = Color(94, 54, 163)).padding(8.dp)) {
+            Text(text = name, fontSize = 30.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        }
 
         Surface(Modifier.padding(5.dp)) {
-            LazyColumn(userScrollEnabled = true, modifier = Modifier.fillMaxWidth().heightIn(max = 750.dp).padding(10.dp)) {
+            LazyColumn(userScrollEnabled = true, modifier = Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(10.dp)) {
                 items(msgList.size) { MsgCard(msgList[it]) }
             }
         }
@@ -77,8 +82,9 @@ val ChatScreen by navDestination<ChatParams> {
                     scope.launch {
                         APIClient.getWebsocket(id).sendSerialized(msg)
                     }
+                    msgInput = ""
                 }
-            ) { Text(text = "Send") }
+            ) { Text("Send") }
         }
     }
 }

@@ -1,3 +1,11 @@
+import Screen.Prefs
+import Screen.emailKey
+import Screen.tokenExpiryKey
+import Screen.tokenKey
+import Screen.userKey
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -18,6 +26,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 
 object APIClient {
@@ -26,7 +35,10 @@ object APIClient {
     private const val WS_URL = "ws://$SERVER/chat"
     private const val API_URL = "http://$SERVER"
 
+    private lateinit var dataStore: DataStore<Preferences>
+
     private lateinit var authToken: String
+    private lateinit var tokenExpiry: Instant
 
     private val client = HttpClient(CIO) {
 
@@ -54,6 +66,8 @@ object APIClient {
     private var wsConnection: DefaultClientWebSocketSession? = null
     //TODO: Is this the right way to do this?
     lateinit var user: String
+    lateinit var email: String
+
 
     suspend fun getWebsocket(id: Long) =
         wsConnection ?: client.webSocketSession("$WS_URL/$id") {
@@ -62,18 +76,42 @@ object APIClient {
             }
         }.also { wsConnection = it }
 
-    suspend fun login(username: String, password: String): Boolean {
+    fun getDataStore(store: DataStore<Preferences>) {
+        dataStore = store
+    }
+
+    fun getPreferences(prefs: Prefs) {
+        authToken = prefs.token
+        user = prefs.user
+        email = prefs.email
+        tokenExpiry = Instant.fromEpochSeconds(prefs.tokenExpiry)
+    }
+
+    suspend fun setPreferences() {
+        dataStore.edit {
+            it[tokenKey] = authToken
+            it[emailKey] = email
+            it[userKey] = user
+            it[tokenExpiryKey] = tokenExpiry.epochSeconds
+        }
+    }
+
+    suspend fun login(emailId: String, password: String): Boolean {
         val resp = client.post("$API_URL/api/login") {
             contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username, password))
+            setBody(LoginRequest(emailId, password))
         }
-        val loginResponse = resp.body<LoginResponse>()
         return if (resp.status == HttpStatusCode.OK) {
+            val loginResponse = resp.body<LoginResponse>()
+            email = emailId
             authToken = loginResponse.token
             user = loginResponse.displayName
+            tokenExpiry = Instant.fromEpochSeconds(loginResponse.tokenExpiry)
+            setPreferences()
             true
         } else {
             authToken = ""
+            println(resp.body<Any?>().toString())
             false
         }
     }

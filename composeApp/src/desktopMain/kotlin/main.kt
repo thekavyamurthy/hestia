@@ -6,6 +6,6 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "Hestia",
     ) {
-        App()
+        App(createDataStore { "" }) //TODO: Fix producer path
     }
 }

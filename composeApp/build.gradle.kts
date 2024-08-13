@@ -71,6 +71,8 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(compose.components.resources)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.androidx.datastore)
+            implementation(libs.androidx.datastore.preferences)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

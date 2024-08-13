@@ -19,12 +19,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import com.composegears.tiamat.navArgs
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 import kotlinx.coroutines.launch
 
-val LoginScreen by navDestination<Unit> {
+val LoginScreen by navDestination<DataStore<Preferences>> {
     val navController = navController()
+    val dataStore = navArgs()
 
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -34,7 +38,7 @@ val LoginScreen by navDestination<Unit> {
         verticalArrangement = Arrangement.Center
     ) {
 
-        var username by remember { mutableStateOf("thekavyamurthy@gmail.com") }
+        var email by remember { mutableStateOf("thekavyamurthy@gmail.com") }
         var password by remember { mutableStateOf("kavya") }
         val scope = rememberCoroutineScope()
 //        val context = LocalContext.current;
@@ -43,7 +47,7 @@ val LoginScreen by navDestination<Unit> {
 
 
         Row {
-            TextField(value = username, onValueChange = { username = it }, Modifier.padding(10.dp), placeholder = { Text("Enter your username") })
+            TextField(value = email, onValueChange = { email = it }, Modifier.padding(10.dp), placeholder = { Text("Enter your username") })
         }
 
         Row {
@@ -58,10 +62,10 @@ val LoginScreen by navDestination<Unit> {
             Button(modifier = Modifier.width(200.dp).padding(10.dp),
                 onClick = {
                     scope.launch {
-                        if (APIClient.login(username, password)) {
-                            navController.replace(ConvScreen)
+                        if (APIClient.login(email, password)) {
+                            navController.navigate(ConvScreen)
                         } else {
-//                            toast.show()
+                            println("login failed")
                         }
                     }
                 }
@@ -69,3 +73,4 @@ val LoginScreen by navDestination<Unit> {
         }
     }
 }
+

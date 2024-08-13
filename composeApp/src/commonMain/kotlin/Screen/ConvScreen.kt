@@ -50,7 +50,7 @@ val ConvScreen by navDestination<Unit> {
 
 @Composable
 fun ConvCard(id: Long, name: String, navController: NavController) {
-    Row (Modifier.padding(20.dp).clickable { navController.replace(ChatScreen, ChatParams(id, name)) }){
+    Row (Modifier.padding(20.dp).clickable { navController.navigate(ChatScreen, ChatParams(id, name)) }){
         Image(
             painter = painterResource(Res.drawable.gnomey),
             contentDescription = "gnomey",

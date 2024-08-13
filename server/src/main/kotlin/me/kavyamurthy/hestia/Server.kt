@@ -95,17 +95,29 @@ fun Application.module() {
         staticResources("/", "website", index = "index.html")
 
         post("/api/login") {
-            val loginRequest = call.receive<LoginRequest>()
-            val user = login(loginRequest.username, hashPassword(loginRequest.password))
-            if (user != null) {
-                println("Login success $user")
-                val token = JWT.create()
-                    .withClaim("userId", user.id)
-                    .withExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
-                    .sign(jwtAlgorithm)
-                call.respond(LoginResponse(token, user.displayName ?: user.firstName))
-            } else {
-                call.respond(HttpStatusCode.Forbidden)
+            try {
+                val loginRequest = call.receive<LoginRequest>()
+                val user = login(loginRequest.email, hashPassword(loginRequest.password))
+                val tokenExpiry = Instant.now().plus(7, ChronoUnit.DAYS)
+                if (user != null) {
+                    println("Login success $user")
+                    val token = JWT.create()
+                        .withClaim("userId", user.id)
+                        .withExpiresAt(tokenExpiry)
+                        .sign(jwtAlgorithm)
+                    call.respond(
+                        LoginResponse(
+                            token,
+                            user.displayName ?: user.firstName,
+                            tokenExpiry.epochSecond
+                        )
+                    )
+                } else {
+                    call.respond(HttpStatusCode.Forbidden)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                call.respond(HttpStatusCode.InternalServerError)
             }
         }
 
