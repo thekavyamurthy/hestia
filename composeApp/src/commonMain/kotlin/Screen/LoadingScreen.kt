@@ -13,9 +13,9 @@ import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 
 val tokenKey = stringPreferencesKey("token")
-val emailKey = stringPreferencesKey("token")
-val userKey = stringPreferencesKey("token")
-val tokenExpiryKey = longPreferencesKey("token")
+val emailKey = stringPreferencesKey("email")
+val userKey = stringPreferencesKey("user")
+val tokenExpiryKey = longPreferencesKey("tokenExpiry")
 
 //TODO: Name this better
 data class Prefs(val token: String, val email: String, val user: String, val tokenExpiry: Long)
