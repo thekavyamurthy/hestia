@@ -19,16 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import com.composegears.tiamat.navArgs
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 import kotlinx.coroutines.launch
 
-val LoginScreen by navDestination<DataStore<Preferences>> {
+val LoginScreen by navDestination<Unit> {
     val navController = navController()
-    val dataStore = navArgs()
 
     Column (
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -45,11 +41,12 @@ val LoginScreen by navDestination<DataStore<Preferences>> {
 //
 //        val toast = Toast.makeText(context, "Login failed", Toast.LENGTH_LONG)
 
-
+        //email
         Row {
             TextField(value = email, onValueChange = { email = it }, Modifier.padding(10.dp), placeholder = { Text("Enter your username") })
         }
 
+        //password
         Row {
             TextField(value = password,
                 visualTransformation = PasswordVisualTransformation(),

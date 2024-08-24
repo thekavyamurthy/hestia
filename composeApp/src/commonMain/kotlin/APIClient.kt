@@ -1,3 +1,4 @@
+
 import Screen.Prefs
 import Screen.emailKey
 import Screen.tokenExpiryKey
@@ -132,5 +133,11 @@ object APIClient {
             }
         }
         return response.body()
+    }
+
+    suspend fun logOut(): Unit {
+        dataStore.edit {
+            it.clear()
+        }
     }
 }

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.composegears.tiamat.navArgs
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
+import kotlinx.datetime.Clock
 
 val tokenKey = stringPreferencesKey("token")
 val emailKey = stringPreferencesKey("email")
@@ -29,21 +30,28 @@ val LoadingScreen by navDestination<DataStore<Preferences>> {
         APIClient.getDataStore(dataStore)
         dataStore.edit {
             println("data edit")
-            if (it[tokenKey] == null) {
+            if (it[tokenKey] == null || it[tokenKey] == "") {
                 println("no token")
-                navController.navigate(LoginScreen, dataStore)
+                navController.navigate(LoginScreen)
             } else {
                 println("token")
-                APIClient.getPreferences(
-                    Prefs(
-                        it[tokenKey] ?: "",
-                        it[emailKey] ?: "",
-                        it[userKey] ?: "",
-                        it[tokenExpiryKey] ?: 0
+                //test this
+                if((it[tokenExpiryKey] ?: Clock.System.now().epochSeconds) > Clock.System.now().epochSeconds) {
+                    println("Token not expired")
+                    APIClient.getPreferences(
+                        Prefs(
+                            it[tokenKey] ?: "",
+                            it[emailKey] ?: "",
+                            it[userKey] ?: "",
+                            it[tokenExpiryKey] ?: 0
+                        )
                     )
-                )
+                    navController.navigate(ConvScreen)
+                } else {
+                    println("Token expired")
+                    navController.navigate(LoginScreen)
+                }
                 println("prefs set")
-                navController.navigate(ConvScreen)
             }
         }
     }

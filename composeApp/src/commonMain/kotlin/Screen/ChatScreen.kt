@@ -22,12 +22,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composegears.tiamat.navArgs
+import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 import io.ktor.client.plugins.websocket.receiveDeserialized
 import io.ktor.client.plugins.websocket.sendSerialized
@@ -40,6 +42,8 @@ data class ChatParams(val id: Long, val name: String)
 val ChatScreen by navDestination<ChatParams> {
     val id = navArgs().id
     val name = navArgs().name
+    val navController = navController()
+
 
     Column {
         val scope = rememberCoroutineScope()
@@ -61,12 +65,15 @@ val ChatScreen by navDestination<ChatParams> {
             }
         }
 
-        Row(Modifier.fillMaxWidth().background(color = Color(94, 54, 163)).padding(8.dp)) {
-            Text(text = name, fontSize = 30.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().background(color = Color(94, 54, 163)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = navController::back, modifier = Modifier.padding(10.dp)) {
+                Text("Back")
+            }
+            Text(text = name, fontSize = 30.sp, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(10.dp))
         }
 
         Surface(Modifier.padding(5.dp)) {
-            LazyColumn(userScrollEnabled = true, modifier = Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(10.dp)) {
+            LazyColumn(userScrollEnabled = true, modifier = Modifier.fillMaxWidth().heightIn(max = 670.dp).padding(10.dp)) {
                 items(msgList.size) { MsgCard(msgList[it]) }
             }
         }
