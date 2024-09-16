@@ -117,6 +117,60 @@ object APIClient {
         }
     }
 
+    //make display name optional
+    suspend fun signup(userName: String, displayName: String, emailId: String, password: String): Boolean {
+        val response = client.post("$API_URL/api/signup") {
+            contentType(ContentType.Application.Json)
+            setBody(CreateUserReq(userName, displayName, emailId, password))
+        }
+        if (response.status == HttpStatusCode.OK) {
+            println("USER CREATED! $response")
+            return (login(emailId, password))
+        } else {
+            println(response.status)
+            return false
+        }
+    }
+
+    suspend fun sendCode(email: String): Boolean {
+        val response = client.post("$API_URL/api/sendCode") {
+            setBody(email)
+        }
+        if (response.status == HttpStatusCode.OK) {
+            println("Code sent!")
+            return true
+        } else if (response.status == HttpStatusCode.Conflict){
+            println(response.status)
+            return false
+        } else {
+            println(response.status)
+            throw Exception("Unexpected Server Error")
+        }
+    }
+
+    suspend fun verifyCode(emailId: String, code: Int): Boolean {
+        val response = client.post("$API_URL/api/verifyCode") {
+            contentType(ContentType.Application.Json)
+            setBody(VerifyEmail(emailId, code))
+        }
+        when (response.status) {
+            HttpStatusCode.OK -> {
+                println("Email Verified!")
+                authToken = response.body<String>()
+                email = emailId;
+                return true
+            }
+            HttpStatusCode.Forbidden -> {
+                println(response.status)
+                return false
+            }
+            else -> {
+                println(response.status)
+                throw Exception("Unexpected Server Error")
+            }
+        }
+    }
+
     suspend fun listConversations(): ArrayList<Conversation> {
         val response = client.get("$API_URL/api/conversations") {
             headers {

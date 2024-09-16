@@ -1,5 +1,5 @@
 [versions]
-agp = "8.2.2"
+agp = "8.6.0"
 android-compileSdk = "34"
 android-minSdk = "24"
 android-targetSdk = "34"
@@ -10,6 +10,7 @@ androidx-core-ktx = "1.13.1"
 androidx-espresso-core = "3.6.0"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.2.0"
+cache4k = "0.13.0"
 compose-plugin = "1.6.11"
 datastore = "1.1.1"
 exposedCore = "0.52.0"
@@ -23,11 +24,13 @@ logback = "1.5.6"
 lz4Java = "1.8.0"
 postgresql = "42.7.3"
 serialization = "1.7.1"
+ses = "1.3.23"
 tiamat = "1.1.0-rc02"
 
 [libraries]
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+cache4k = { module = "io.github.reactivecircus.cache4k:cache4k", version.ref = "cache4k" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposedCore" }
 exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "exposedCore" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposedCore" }
@@ -51,6 +54,7 @@ ktor-server-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "k
 ktor-server-tests = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor" }
 lz4-java = { module = "org.lz4:lz4-java", version.ref = "lz4Java" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+ses = { module = "aws.sdk.kotlin:ses", version.ref = "ses" }
 tiamat = { module = "io.github.composegears:tiamat", version.ref = "tiamat" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", version.ref = "ktor" }

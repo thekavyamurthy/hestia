@@ -1,8 +1,10 @@
 package me.kavyamurthy.hestia
 
+import CreateUserReq
 import LoginRequest
 import LoginResponse
 import Message
+import VerifyEmail
 import com.auth0.jwt.JWT
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
@@ -38,18 +40,23 @@ import kotlinx.serialization.json.Json
 import me.kavyamurthy.hestia.db.ConversationMembers
 import me.kavyamurthy.hestia.db.Conversations
 import me.kavyamurthy.hestia.db.DirectMessages
-import me.kavyamurthy.hestia.db.Users.login
+import me.kavyamurthy.hestia.db.Login.login
+import me.kavyamurthy.hestia.db.Login.loginExists
+import me.kavyamurthy.hestia.db.Users.createUser
+import me.kavyamurthy.hestia.db.Users.userExists
 import org.jetbrains.exposed.sql.Database
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Collections
 
-
+private val logger = LoggerFactory.getLogger("HestiaServer")
 
 fun main() {
     Database.connect(config.db.url, user = config.db.username, password = config.db.password)
 
+    logger.info("Starting server")
     embeddedServer(Netty, port = config.server.port, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
@@ -100,7 +107,7 @@ fun Application.module() {
                 val user = login(loginRequest.email, hashPassword(loginRequest.password))
                 val tokenExpiry = Instant.now().plus(7, ChronoUnit.DAYS)
                 if (user != null) {
-                    println("Login success $user")
+                    logger.info("Login success $user")
                     val token = JWT.create()
                         .withClaim("userId", user.id)
                         .withExpiresAt(tokenExpiry)
@@ -108,7 +115,7 @@ fun Application.module() {
                     call.respond(
                         LoginResponse(
                             token,
-                            user.displayName ?: user.firstName,
+                            user.displayName,
                             tokenExpiry.epochSecond
                         )
                     )
@@ -116,7 +123,45 @@ fun Application.module() {
                     call.respond(HttpStatusCode.Forbidden)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                logger.error("Error in login", e)
+                call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
+
+        post("/api/sendCode") {
+            val email = call.receive<String>()
+            if(loginExists(email)) {
+                call.respond(HttpStatusCode.Conflict)
+            } else {
+                sendCode(email)
+                call.respond(HttpStatusCode.OK)
+            }
+        }
+
+        post("/api/verifyCode") {
+            val verifyCode = call.receive<VerifyEmail>()
+            if(verifyCode(verifyCode.email, verifyCode.code)) {
+                val token = JWT.create()
+                    .withClaim("email", verifyCode.email)
+                    .withExpiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
+                    .sign(jwtAlgorithm)
+                call.respond(token)
+            } else {
+                call.respond(HttpStatusCode.Forbidden)
+            }
+        }
+
+        post("/api/signup") {
+            try {
+                val userReq = call.receive<CreateUserReq>()
+                if(userExists(userReq.userName)) {
+                    call.respond(HttpStatusCode.Conflict)
+                } else {
+                    createUser(userReq.userName, userReq.displayName, userReq.email, userReq.password)
+                    call.respond(HttpStatusCode.OK)
+                }
+            } catch (e: Exception) {
+                logger.error("Exception in signup", e)
                 call.respond(HttpStatusCode.InternalServerError)
             }
         }
@@ -164,9 +209,8 @@ fun Application.module() {
                         }
                     } catch (_: ClosedReceiveChannelException) {
                     } catch (e: Exception) {
-                        println(e.localizedMessage)
+                        logger.error("Error in chat", e)
                     } finally {
-                        println("removing connection")
                         connections -= thisConnection
                     }
                 }

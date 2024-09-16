@@ -7,47 +7,69 @@ import me.kavyamurthy.hestia.config
 import me.kavyamurthy.hestia.hashPassword
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Schema
 import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.coalesce
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object Users : Table("hestia.users") {
     val id = integer("id").autoIncrement()
-    val email = text("email_id")
-    val passwordHash = integer("password_hash")
-    val firstName = text("first_name")
-    val lastName = text("last_name")
-    val displayName = text("display_name").nullable()
+    val userName = text("user_name").uniqueIndex()
+    val displayName = text("display_name")
 
     override val primaryKey = PrimaryKey(id)
 
+    fun createUser(userName: String, displayName: String, email: String, password: String) = transaction {
+        val userId = Users.insert {
+            it[Users.userName] = userName
+            it[Users.displayName] = displayName
+        } get Users.id
+        Login.insert {
+            it[Login.email] = email
+            it[Login.userId] = userId
+            it[Login.passwordHash] = hashPassword(password)
+        }
+    }
+
+    fun userExists(userName: String) = transaction {
+        Users.select(Users.userName)
+            .where { Users.userName eq userName }
+            .empty()
+            .not()
+    }
+}
+
+object Login : Table("hestia.login") {
+    val email = text("email")
+    val userId = integer("user_id") references Users.id
+    val passwordHash = integer("password_hash")
+
+    override val primaryKey = PrimaryKey(email)
+
     fun login(email: String, passwordHash: Int) = try {
         transaction {
-            Users.selectAll().where {
-                (Users.email eq email) and (Users.passwordHash eq passwordHash)
-            }.singleOrNull()?.toUser()
+            Login.innerJoin(Users)
+                .select(Users.id, Users.userName, Users.displayName)
+                .where { (Login.email eq email) and (Login.passwordHash eq passwordHash) }
+                .map { User(it[Users.id], it[Users.userName], it[Users.displayName]) }
+                .singleOrNull()
         }
     } catch (e: Exception) {
         e.printStackTrace()
         null
     }
 
-    private fun ResultRow.toUser() = User(
-        this[id],
-        this[email],
-        this[firstName],
-        this[lastName],
-        this[displayName]
-    )
+    fun loginExists(email: String) = transaction {
+        Login.select(Login.email)
+            .where { Login.email eq email }
+            .empty()
+            .not()
+    }
 }
 
 object Conversations : Table("hestia.conversations") {
@@ -62,14 +84,13 @@ object Conversations : Table("hestia.conversations") {
         val cm = ConversationMembers
         val cm1 = cm.alias("cm1")
         val cm2 = cm.alias("cm2")
-        val convName = coalesce(Users.displayName, Users.firstName)
 
         cm1.join(cm2, JoinType.INNER, cm1[cm.convId], cm2[cm.convId])
             .join(Users, JoinType.INNER, cm2[cm.userId], Users.id)
-            .select(cm1[cm.convId], cm2[cm.userId], convName)
+            .select(cm1[cm.convId], cm2[cm.userId], Users.displayName)
             .where { (cm1[cm.userId] eq userId) and (cm2[cm.userId] neq userId) }
             .toList()
-            .map { Conversation(it[convName], it[cm1[cm.convId]]) }
+            .map { Conversation(it[Users.displayName], it[cm1[cm.convId]]) }
     }
 }
 
@@ -94,13 +115,12 @@ object DirectMessages : Table("hestia.direct_messages") {
     override val primaryKey = PrimaryKey(id)
 
     fun getMessages(convId: Long) = transaction {
-        val fromName = coalesce(Users.displayName, Users.firstName)
         DirectMessages.innerJoin(Users)
-            .select(fromUser, fromName, DirectMessages.convId, message, timestamp)
+            .select(fromUser, Users.displayName, DirectMessages.convId, message, timestamp)
             .where { DirectMessages.convId eq convId }
             .orderBy(timestamp)
             .toList()
-            .map { Message(it[fromUser], it[fromName], it[DirectMessages.convId], it[message], it[timestamp].epochSeconds) }
+            .map { Message(it[fromUser], it[Users.displayName], it[DirectMessages.convId], it[message], it[timestamp].epochSeconds) }
     }
 
     fun add(userId: Int, msg: Message) = transaction {
@@ -110,27 +130,17 @@ object DirectMessages : Table("hestia.direct_messages") {
 
 fun initializeDB() = transaction {
     SchemaUtils.createSchema(Schema("hestia"))
-    SchemaUtils.create(Users, DirectMessages, Conversations, ConversationMembers)
-    val kavya = addUser("thekavyamurthy@gmail.com", "kavya", "Kavya", "Murthy")
-    val vikas = addUser("vikasmurthy@hotmail.com", "vikas", "Vikas", "Murthy")
-    val shilpa = addUser("shilpaprasad@gmail.com", "shilpa", "Shilpa", "Prasad")
-
-    val kv = addConversation(listOf(vikas, kavya))
-    val sk = addConversation(listOf(kavya, shilpa))
-
-    addMessage(kavya, kv, "Hi Appa")
-    addMessage(vikas, kv, "Hi Kavyu")
-    addMessage(shilpa, sk, "Hi Laddoo")
+    SchemaUtils.create(Users, Login, DirectMessages, Conversations, ConversationMembers)
 }
 
-fun addUser(email: String, password: String, firstName: String, lastName: String): Int {
-    return Users.insert {
-        it[Users.email] = email
-        it[passwordHash] = hashPassword(password)
-        it[Users.firstName] = firstName
-        it[Users.lastName] = lastName
-    } get Users.id
-}
+//fun addUser(email: String, password: String, firstName: String, lastName: String): Int = transaction {
+//    Users.insert {
+//        it[Users.email] = email
+//        it[passwordHash] = hashPassword(password)
+//        it[Users.firstName] = firstName
+//        it[Users.lastName] = lastName
+//    } get Users.id
+//}
 
 fun addConversation(users: List<Int>, name: String? = null): Long {
     val convId = Conversations.insert {
@@ -160,8 +170,5 @@ fun addMessage(from: Int, conv: Long, msg: String) {
 
 fun main() {
     Database.connect(config.db.url, user = config.db.username, password = config.db.password)
-
-    println(Conversations.getConvList(1))
-
-//    initializeDB()
+    initializeDB()
 }

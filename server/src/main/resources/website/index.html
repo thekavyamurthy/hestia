@@ -3,72 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Hestia</title>
+    <title>Hestia - Secure, Anonymous Communication</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f2f0f7;
-            color: #333;
-            text-align: center;
+            color: #fff;
+            background: linear-gradient(135deg, #6a1b9a, #9c27b0); /* Higher contrast purple gradient */
         }
         header {
-            background-color: #6036a3;
-            color: white;
-            padding: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #4a0072; /* Dark purple for contrast */
         }
-        h1 {
-            margin: 0;
-            font-size: 2.5em;
+        header .logo {
+            font-size: 24px;
+            font-weight: bold;
         }
-        p {
-            font-size: 1.2em;
-            margin-top: 20px;
-            line-height: 1.6;
-        }
-        .button {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 1.1em;
-            color: white;
-            background-color: #6036a3;
-            border: none;
-            border-radius: 5px;
+        header nav a {
+            color: #fff;
+            margin: 0 15px;
             text-decoration: none;
-            transition: background-color 0.3s;
+            font-weight: bold;
         }
-        .button:hover {
-            background-color: #4a2e82;
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+            background: rgba(108, 25, 139, 0.8); /* Semi-transparent dark purple for contrast */
         }
-        .community {
-            padding: 30px;
-            padding-bottom: 60px;
-            background-color: #e9e1f2;
+        .hero h1 {
+            font-size: 36px;
+            margin: 0;
+        }
+        .hero p {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .hero .btn {
+            padding: 10px 20px;
+            margin: 10px;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #9c27b0; /* Bright purple for contrast */
+        }
+        .btn-secondary {
+            border: 2px solid #fff;
+            background: transparent;
+        }
+        .features, .how-it-works, .testimonials {
+            padding: 60px 20px;
+            text-align: center;
+        }
+        .features h2, .how-it-works h2, .testimonials h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .feature-cards, .how-it-works-steps {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .feature-card, .how-it-work-step {
+            background: #4a0072; /* Bright purple for contrast */
             border-radius: 10px;
+            padding: 20px;
+            max-width: 300px;
+            flex: 1;
+            margin: 10px;
         }
-        .community h2 {
-            color: #6036a3;
+        .feature-card img, .how-it-work-step img {
+            max-width: 50px;
+            margin-bottom: 15px;
+        }
+        .feature-card h3, .how-it-work-step h3 {
+            margin-top: 0;
+        }
+        .testimonials .testimonial {
+            margin: 20px auto;
+            padding: 20px;
+            background: #5e35b1; /* Darker purple for contrast */
+            border-radius: 10px;
+            max-width: 600px;
         }
         footer {
+            background: #4a0072; /* Dark purple for contrast */
+            padding: 20px;
+            text-align: center;
+        }
+        footer .social-icons a {
+            color: #fff;
+            margin: 0 10px;
+            text-decoration: none;
+            font-size: 18px;
+        }
+        .newsletter {
             margin-top: 20px;
-            font-size: 0.9em;
-            color: #777;
+        }
+        .newsletter input[type="email"] {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            width: calc(100% - 100px);
+            margin-right: 10px;
+            background: #ffffff;
+            color: #000;
+        }
+        .newsletter button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #9c27b0; /* Bright purple for contrast */
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .live-chat {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #9c27b0; /* Bright purple for contrast */
+            color: #fff;
+            padding: 10px;
+            border-radius: 50%;
+            text-align: center;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 <header>
-    <h1>Welcome to Hestia!</h1>
+    <div class="logo">Hestia</div>
 </header>
-<div class="container community">
-    <h2>Join Our Community</h2>
-    <p>At Hestia, we're more than just an app; we're a community. Connect with others, share your experiences, and find support in our vibrant user base. Your journey with Hestia is just beginning, and we’re here to make it enjoyable and fulfilling.</p>
-    <a href="mailto:the.kavya.murthy+hestia@gmail.com" class="button">Join the Community</a>
+
+<div class="hero">
+    <h1>Communicate Safely. Stay Anonymous.</h1>
+    <p>Hestia ensures your conversations remain private and secure, free from prying eyes.</p>
+    <a href="#" class="btn btn-primary">Get Started</a>
+    <a href="#" class="btn btn-secondary">Learn More</a>
 </div>
+
+<div class="features">
+    <h2>Why Choose Hestia?</h2>
+    <div class="feature-cards">
+        <div class="feature-card">
+            <h3>End-to-End Encryption</h3>
+            <p>Your messages are encrypted from sender to receiver, ensuring that only you and your recipient can read them.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Anonymous Identity</h3>
+            <p>Maintain your anonymity with features that keep your identity hidden from all parties.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Zero-Log Policy</h3>
+            <p>We never store any of your communication data. Your privacy is our top priority.</p>
+        </div>
+    </div>
+</div>
+
+<div class="how-it-works">
+    <h2>Simple. Secure. Anonymous.</h2>
+    <div class="how-it-works-steps">
+        <div class="how-it-work-step">
+            <h3>Download Hestia</h3>
+            <p>Available on all major platforms.</p>
+        </div>
+        <div class="how-it-work-step">
+            <h3>Create Your Secure Profile</h3>
+            <p>Set up your anonymous account in minutes.</p>
+        </div>
+        <div class="how-it-work-step">
+            <h3>Start Communicating</h3>
+            <p>Enjoy secure, encrypted conversations with anyone.</p>
+        </div>
+    </div>
+</div>
+
 <footer>
-    <p>&copy; 2024 Hestia Inc. All rights reserved.</p>
+
 </footer>
 </body>
 </html>

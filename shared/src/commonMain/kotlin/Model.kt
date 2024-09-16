@@ -11,3 +11,9 @@ data class LoginResponse(val token: String, val displayName: String, val tokenEx
 
 @Serializable
 data class Conversation(val name: String, val id: Long)
+
+@Serializable
+data class CreateUserReq(val userName: String, val displayName: String, val email: String, val password: String)
+
+@Serializable
+data class VerifyEmail(val email: String, val code: Int)

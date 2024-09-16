@@ -4,6 +4,9 @@ import Screen.ChatScreen
 import Screen.ConvScreen
 import Screen.LoadingScreen
 import Screen.LoginScreen
+import Screen.SignupScreen1
+import Screen.SignupScreen2
+import Screen.SignupScreen3
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,8 +26,11 @@ fun App(dataStore: DataStore<Preferences>) {
         destinations = arrayOf(
             LoadingScreen,
             LoginScreen,
+            SignupScreen1,
+            SignupScreen2,
+            SignupScreen3,
             ConvScreen,
-            ChatScreen
+            ChatScreen,
         ),
         startDestinationNavArgs = dataStore
     )

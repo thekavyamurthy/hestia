@@ -13,7 +13,7 @@ data class ServerConfig(val secret: String, val port: Int)
 data class Config(val db: DBConfig, val auth: AuthConfig, val server: ServerConfig)
 
 val config = ConfigLoaderBuilder.default()
-    .addResourceSource("/hestia-dev.yaml", true, true)
+//    .addResourceSource("/hestia-dev.yaml", true, true)
     .addResourceSource("/hestia.yaml")
     .build()
     .loadConfigOrThrow<Config>()

@@ -32,7 +32,8 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.lz4.java)
     implementation(libs.hoplite.yaml)
-
+    implementation(libs.ses)
+    implementation(libs.cache4k)
 
     testImplementation(libs.ktor.server.tests)
     testImplementation(libs.kotlin.test.junit)
