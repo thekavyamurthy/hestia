@@ -1,6 +1,7 @@
 package Screen
 
 import APIClient
+import Screen.signupScreens.SignupScreen1
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

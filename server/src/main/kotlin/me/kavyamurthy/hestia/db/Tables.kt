@@ -1,21 +1,31 @@
 package me.kavyamurthy.hestia.db
 
 import Conversation
+import ConversationType
+import Group
 import Message
+import User
 import kotlinx.datetime.Clock
 import me.kavyamurthy.hestia.config
 import me.kavyamurthy.hestia.hashPassword
+import org.jetbrains.exposed.sql.CustomStringFunction
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.EqOp
+import org.jetbrains.exposed.sql.Expression
+import org.jetbrains.exposed.sql.ExpressionWithColumnType
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.Schema
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.alias
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.intLiteral
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
+
+private val logger = LoggerFactory.getLogger("HestiaTables")
 
 object Users : Table("hestia.users") {
     val id = integer("id").autoIncrement()
@@ -41,6 +51,13 @@ object Users : Table("hestia.users") {
             .where { Users.userName eq userName }
             .empty()
             .not()
+    }
+
+    fun lookupUser(userName: String): User? = transaction {
+        Users.select(Users.id, Users.userName, Users.displayName)
+            .where { Users.userName eq userName }
+            .map { User(it[Users.id], it[Users.userName], it[Users.displayName]) }
+            .singleOrNull()
     }
 }
 
@@ -72,42 +89,154 @@ object Login : Table("hestia.login") {
     }
 }
 
-object Conversations : Table("hestia.conversations") {
+object Groups : Table("hestia.groups") {
     val id = long("id").autoIncrement()
-    val name = text("name").nullable()
+    val name = text("name")
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val createdBy = integer("created_by") references Users.id
 // TODO: conversation type
 
     override val primaryKey = PrimaryKey(id)
-    fun getConvList(userId: Int) = transaction {
-        val cm = ConversationMembers
-        val cm1 = cm.alias("cm1")
-        val cm2 = cm.alias("cm2")
 
-        cm1.join(cm2, JoinType.INNER, cm1[cm.convId], cm2[cm.convId])
-            .join(Users, JoinType.INNER, cm2[cm.userId], Users.id)
-            .select(cm1[cm.convId], cm2[cm.userId], Users.displayName)
-            .where { (cm1[cm.userId] eq userId) and (cm2[cm.userId] neq userId) }
-            .toList()
-            .map { Conversation(it[Users.displayName], it[cm1[cm.convId]]) }
+    fun getGroupList(userId: Int) = transaction {
+        Groups.innerJoin(GroupMembers).select(Groups.id, name).where {
+            GroupMembers.userId eq userId
+        }.toList().map { Group(it[Groups.id], it[name]) }
+    }
+
+    fun getMembers(groupId: Long) = transaction {
+        GroupMembers.innerJoin(Users).select(Users.id, Users.userName, Users.displayName).where {
+            GroupMembers.groupId eq groupId
+        }.toList().map { User(it[Users.id], it[Users.userName], it[Users.displayName]) }
+    }
+
+    fun addMember(groupId: Long, userId: Int) = transaction {
+        GroupMembers.insert {
+            it[GroupMembers.groupId] = groupId
+            it[GroupMembers.userId] = userId
+        }
+    }
+
+    //this is all wrong basically idk do something about it
+    fun newConv(createdBy: Int, otherUser: String, name: String): Conversation = transaction {
+        if (Users.userExists(otherUser)) {
+            val otherUserId = Users.select(Users.id).where { Users.userName eq otherUser }
+            val convId = Groups.insert {
+                it[Groups.name] = name
+                it[Groups.createdAt] = Clock.System.now()
+                it[Groups.createdBy] = createdBy
+            } get (Groups.id)
+
+            GroupMembers.insert {
+                it[GroupMembers.groupId] = convId
+                it[GroupMembers.userId] = otherUserId
+            }
+            GroupMembers.insert {
+                it[GroupMembers.groupId] = convId
+                it[GroupMembers.userId] = createdBy
+            }
+
+            val otherDisplayName = Users.select(Users.displayName).where { Users.userName eq otherUser }.single().toString()
+            Conversation(otherDisplayName, convId, ConversationType.SPACE)
+        } else {
+            Conversation("", 0L, ConversationType.SPACE)
+        }
     }
 }
 
-object ConversationMembers : Table("hestia.conversation_members") {
-    val convId = long("conv_id") references Conversations.id
+object GroupMembers : Table("hestia.group_members") {
+    val groupId = long("group_id") references Groups.id
     val userId = integer("user_id") references Users.id
+}
+
+object Messages : Table("hestia.messages") {
+    val id = long("id").autoIncrement()
+    val convId = long("conv_id") references Spaces.id
+    val fromUser = integer("from_user") references Users.id
+    val message = text("message")
+    val timestamp = timestamp("ts").defaultExpression(CurrentTimestamp)
+
+    override val primaryKey = PrimaryKey(id)
+
+    fun getMessages(spaceId: Long) = transaction {
+        Messages.innerJoin(Users)
+            .select(fromUser, Users.displayName, Messages.convId, message, timestamp)
+            .where { Messages.convId eq spaceId }
+            .orderBy(timestamp)
+            .toList()
+            .map { Message(ConversationType.SPACE, it[Messages.convId], it[timestamp].epochSeconds, it[fromUser], it[Users.displayName], it[message]) }
+    }
+
+    fun add(fromId: Int, msg: Message) = transaction {
+        Messages.insert {
+            it[convId] = msg.convId
+            it[fromUser] = fromId
+            it[message] = msg.body
+            it[timestamp] = Clock.System.now()
+        }
+    }
+}
+
+object Spaces : Table("hestia.spaces") {
+    val id = long("id").autoIncrement()
+    val name = text("name")
+    val groupId = long("groupId").references(Groups.id)
+
+    override val primaryKey = PrimaryKey(id)
+
+    fun getSpaces(userId: Int) = transaction {
+        Spaces.innerJoin(Groups).innerJoin(GroupMembers).select(Spaces.id, name, Groups.name).where {
+            GroupMembers.userId eq userId
+        }.toList().map { Conversation(it[name] + "(" + it[Groups.name] + ")", it[Spaces.id], ConversationType.SPACE) }
+    }
+
+    fun getMembers(spaceId: Long) = transaction {
+        Spaces.innerJoin(Groups).innerJoin(GroupMembers).select(GroupMembers.userId).where {
+            Spaces.id eq spaceId
+        }.toList().map { it[GroupMembers.userId].toInt() }
+    }
+}
+
+object DirectConversations : Table("hestia.direct_conversations") {
+    val id = long("id").autoIncrement()
+    val userIds = array<Int>("user_ids").uniqueIndex()
+    val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+    val createdBy = integer("created_by") references Users.id
+
+    override val primaryKey = PrimaryKey(DirectConversations.id)
+
+    fun getConvList(userId: Int): List<Conversation> = transaction {
+        logger.info("getting conversation list")
+        DirectConversations.join(Users, JoinType.INNER) { Users.id eqAny userIds }
+            .select(DirectConversations.id, Users.displayName)
+            .where { (userId equalsAny userIds) and (Users.id neq userId) }
+            .toList()
+            .map { Conversation(it[Users.displayName], it[DirectConversations.id], ConversationType.DIRECT) }
+    }
+
+    fun getOrAddConv(from: Int, to: Int) = transaction {
+        logger.info("getting or adding conversation")
+        select(DirectConversations.id).where {
+            userIds eq listOf(from, to).sorted()
+        }.singleOrNull()
+            ?.get(DirectConversations.id)
+            ?.toLong() ?: (DirectConversations.insert {
+                it[userIds] = listOf(from, to).sorted()
+                it[createdAt] = Clock.System.now()
+                it[createdBy] = from
+        } get DirectConversations.id)
+    }
 
     fun getMembers(convId: Long) = transaction {
-        ConversationMembers.select(userId).where {
-            ConversationMembers.convId eq convId
-        }.toList().map { it[userId].toInt() }
+        select(userIds).where {
+            DirectConversations.id eq convId
+        }.flatMap { it[userIds] }
     }
 }
 
 object DirectMessages : Table("hestia.direct_messages") {
     val id = long("id").autoIncrement()
-    val convId = long("conv_id") references Conversations.id
+    val convId = long("conv_id") references DirectConversations.id
     val fromUser = integer("from_user") references Users.id
     val message = text("message")
     val timestamp = timestamp("ts").defaultExpression(CurrentTimestamp)
@@ -120,17 +249,19 @@ object DirectMessages : Table("hestia.direct_messages") {
             .where { DirectMessages.convId eq convId }
             .orderBy(timestamp)
             .toList()
-            .map { Message(it[fromUser], it[Users.displayName], it[DirectMessages.convId], it[message], it[timestamp].epochSeconds) }
+            .map { Message(ConversationType.DIRECT, it[DirectMessages.convId], it[timestamp].epochSeconds, it[fromUser], it[Users.displayName], it[message]) }
     }
 
-    fun add(userId: Int, msg: Message) = transaction {
-        addMessage(userId, msg.convId, msg.body)
+    fun add(fromId: Int, msg: Message) = transaction {
+        addMessage(fromId, msg.convId, msg.body)
     }
 }
 
+
+
 fun initializeDB() = transaction {
     SchemaUtils.createSchema(Schema("hestia"))
-    SchemaUtils.create(Users, Login, DirectMessages, Conversations, ConversationMembers)
+    SchemaUtils.create(Users, Login, DirectMessages, Groups, GroupMembers, Messages, DirectConversations, Spaces)
 }
 
 //fun addUser(email: String, password: String, firstName: String, lastName: String): Int = transaction {
@@ -142,22 +273,22 @@ fun initializeDB() = transaction {
 //    } get Users.id
 //}
 
-fun addConversation(users: List<Int>, name: String? = null): Long {
-    val convId = Conversations.insert {
-        it[Conversations.name] = name
-        it[createdAt] = Clock.System.now()
-        it[createdBy] = 1
-    } get Conversations.id
-
-    users.forEach {userId ->
-        ConversationMembers.insert {
-            it[ConversationMembers.convId] = convId
-            it[ConversationMembers.userId] = userId
-        }
-    }
-
-    return convId
-}
+//fun addConversation(users: List<Int>, name: String? = null): Long {
+//    val convId = Conversations.insert {
+//        it[Conversations.name] = name
+//        it[createdAt] = Clock.System.now()
+//        it[createdBy] = 1
+//    } get Conversations.id
+//
+//    users.forEach {userId ->
+//        ConversationMembers.insert {
+//            it[ConversationMembers.convId] = convId
+//            it[ConversationMembers.userId] = userId
+//        }
+//    }
+//
+//    return convId
+//}
 
 fun addMessage(from: Int, conv: Long, msg: String) {
     DirectMessages.insert {
@@ -170,5 +301,52 @@ fun addMessage(from: Int, conv: Long, msg: String) {
 
 fun main() {
     Database.connect(config.db.url, user = config.db.username, password = config.db.password)
-    initializeDB()
+
+//    initializeDB()
+
+    transaction {
+        SchemaUtils.create(Messages)
+//        Users.createUser("kavyamurthy", "Kavya", "thekavyamurthy@gmail.com", "kavya")
+//        Users.createUser("vikasmurthy", "Vikas", "vikasmurthy@gmail.com", "vikas")
+//        Users.createUser("koalaperson", "Koala", "koalaperson25@gmail.com", "koala")
+
+//        Groups.insert {
+//            it[name] = "Huzzah"
+//            it[createdBy] = 10
+//        }
+
+//        GroupMembers.insert {
+//            it[groupId] = 10
+//            it[userId] = 10
+//        }
+//
+//        GroupMembers.insert {
+//            it[groupId] = 10
+//            it[userId] = 11
+//        }
+//
+//        GroupMembers.insert {
+//            it[groupId] = 10
+//            it[userId] = 12
+//        }
+
+//        Spaces.insert {
+//            it[name] = "Animals"
+//            it[groupId] = 10
+//        }
+//
+//        Spaces.insert {
+//            it[name] = "Shapes"
+//            it[groupId] = 10
+//        }
+    }
 }
+
+private infix fun Int.equalsAny(other: Expression<List<Int>>): EqOp =
+    intLiteral(this) eqAny other
+
+private infix fun <T> Expression<T>.eqAny(other: Expression<List<T>>): EqOp = EqOp(this, any(other))
+
+private fun <T> any(
+    expression: Expression<List<T>>,
+): ExpressionWithColumnType<String?> = CustomStringFunction("ANY", expression)

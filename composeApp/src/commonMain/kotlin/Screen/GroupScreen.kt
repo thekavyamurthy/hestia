@@ -1,8 +1,7 @@
 package Screen
 
 import APIClient
-import Conversation
-import ConversationType
+import Group
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +31,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.composegears.tiamat.NavController
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 import hestia.composeapp.generated.resources.Res
@@ -41,19 +38,56 @@ import hestia.composeapp.generated.resources.gnomey
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
-val ConvScreen by navDestination<Unit> {
+val GroupScreen by navDestination<Unit> {
     val navController = navController()
 
     val scope = rememberCoroutineScope()
-    var convList by remember { mutableStateOf(ArrayList<Conversation>()) }
+    var groupList by remember { mutableStateOf(ArrayList<Group>()) }
 
     LaunchedEffect(Unit) {
-        convList = APIClient.listConversations()
+        groupList = APIClient.listGroups()
     }
     Scaffold(
-        bottomBar = { BottomNavBar(navController, 0) }
+        bottomBar = { BottomNavBar(navController, 1) }
     ) {
         Column {
+            Surface(Modifier.padding(5.dp).weight(0.5F)) {
+                LazyColumn(
+                    userScrollEnabled = true,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(10.dp)
+                ) {
+                    items(groupList.size) {
+                        Row (Modifier.padding(20.dp).clickable { navController.navigate(
+                            GroupDetailScreen, groupList[it]) }){
+                            Image(
+                                painter = painterResource(Res.drawable.gnomey),
+                                contentDescription = "gnomey",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .align(Alignment.CenterVertically)
+                            )
+                            Text(groupList[it].name, Modifier.padding(horizontal = 15.dp).align(Alignment.CenterVertically), fontSize = 20.sp)
+                        }
+                    }
+                    item {
+                        Row (Modifier.padding(20.dp).clickable { navController.navigate(NewGroupScreen1) }) {
+                            Image(
+                                painter = painterResource(Res.drawable.gnomey),
+                                contentDescription = "gnomey",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .align(Alignment.CenterVertically)
+                            )
+                            Text("New Group", Modifier.padding(horizontal = 15.dp).align(Alignment.CenterVertically), fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
+
             //get rid of this eventually please
             Row(Modifier.fillMaxWidth()) {
                 Button(
@@ -69,55 +103,6 @@ val ConvScreen by navDestination<Unit> {
                     Text("Logout")
                 }
             }
-
-            Surface(Modifier.padding(5.dp).weight(0.5F)) {
-                LazyColumn(
-                    userScrollEnabled = true,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 700.dp).padding(10.dp)
-                ) {
-                    items(convList.size) {
-                        ConvCard(convList[it].type, convList[it].id, convList[it].name, navController)
-                    }
-                    item {
-                        NewConv(navController)
-                    }
-                }
-            }
         }
     }
 }
-
-//Change image
-@Composable
-fun ConvCard(type: ConversationType, id: Long, name: String, navController: NavController) {
-    Row (Modifier.padding(20.dp).clickable { navController.navigate(ChatScreen, ChatParams(type, id, name)) }){
-        Image(
-            painter = painterResource(Res.drawable.gnomey),
-            contentDescription = "gnomey",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .align(Alignment.CenterVertically)
-        )
-        Text(name, Modifier.padding(horizontal = 15.dp).align(Alignment.CenterVertically), fontSize = 20.sp)
-    }
-}
-
-//Change image
-@Composable
-fun NewConv(navController: NavController) {
-    Row (Modifier.padding(20.dp).clickable { navController.navigate(NewConvScreen) }) {
-        Image(
-            painter = painterResource(Res.drawable.gnomey),
-            contentDescription = "gnomey",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .align(Alignment.CenterVertically)
-        )
-        Text("New Conversation", Modifier.padding(horizontal = 15.dp).align(Alignment.CenterVertically), fontSize = 20.sp)
-    }
-}
-

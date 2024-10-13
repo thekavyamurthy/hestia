@@ -1,6 +1,7 @@
-package Screen
+package Screen.signupScreens
 
 import APIClient
+import Screen.ConvScreen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -112,6 +113,17 @@ val SignupScreen3 by navDestination<Unit> {
             if(userNameError) {
                 Text(
                     text = "This username is already in use. Please pick another.",
+                    color = Color.Red,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        //SEE IF THIS IS WORKING
+        Row {
+            if(userName.contains(" ")) {
+                Text(
+                    text = "Your username cannot contain any spaces.",
                     color = Color.Red,
                     textAlign = TextAlign.Center
                 )

@@ -65,7 +65,7 @@ object APIClient {
     }
 
     private var wsConnection: DefaultClientWebSocketSession? = null
-    //TODO: Is this the right way to do this?
+    //Is this the right way to do this?
     lateinit var user: String
     lateinit var email: String
 
@@ -88,7 +88,7 @@ object APIClient {
         tokenExpiry = Instant.fromEpochSeconds(prefs.tokenExpiry)
     }
 
-    suspend fun setPreferences() {
+    private suspend fun setPreferences() {
         dataStore.edit {
             it[tokenKey] = authToken
             it[emailKey] = email
@@ -157,7 +157,7 @@ object APIClient {
             HttpStatusCode.OK -> {
                 println("Email Verified!")
                 authToken = response.body<String>()
-                email = emailId;
+                email = emailId
                 return true
             }
             HttpStatusCode.Forbidden -> {
@@ -171,6 +171,15 @@ object APIClient {
         }
     }
 
+    suspend fun listGroups(): ArrayList<Group> {
+        val response = client.get("$API_URL/api/groups") {
+            headers {
+                append(HttpHeaders.Authorization, "Bearer $authToken")
+            }
+        }
+        return response.body()
+    }
+
     suspend fun listConversations(): ArrayList<Conversation> {
         val response = client.get("$API_URL/api/conversations") {
             headers {
@@ -180,8 +189,8 @@ object APIClient {
         return response.body()
     }
 
-    suspend fun getConversation(id: Long): ArrayList<Message> {
-        val response = client.get("$API_URL/api/conversation/$id") {
+    suspend fun listSpaces(): ArrayList<Conversation> {
+        val response = client.get("$API_URL/api/spaces") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer $authToken")
             }
@@ -189,7 +198,58 @@ object APIClient {
         return response.body()
     }
 
-    suspend fun logOut(): Unit {
+    suspend fun getConversation(type: ConversationType, id: Long): ArrayList<Message> {
+        val response = client.get("$API_URL/api/conversation/$type/$id") {
+            headers {
+                append(HttpHeaders.Authorization, "Bearer $authToken")
+            }
+        }
+        return response.body()
+    }
+
+    suspend fun newConv(otherUser: String): Conversation {
+        val response = client.post("$API_URL/api/newConversation") {
+            headers {
+                append(HttpHeaders.Authorization, "Bearer $authToken")
+            }
+            setBody(otherUser)
+        }
+        if (response.status == HttpStatusCode.OK) {
+            println("New Conv!")
+            return response.body()
+        } else if (response.status == HttpStatusCode.BadRequest){
+            println("User doesn't exist" + response.status)
+            return Conversation("", 0, ConversationType.DIRECT)
+        } else {
+            println(response.status)
+            throw Exception("Unexpected Server Error")
+        }
+    }
+
+    suspend fun listMembers(groupId: Long): ArrayList<User> {
+        val response = client.get("$API_URL/api/groups/$groupId/members") {
+            headers {
+                append(HttpHeaders.Authorization, "Bearer $authToken")
+            }
+        }
+        return response.body()
+    }
+
+    suspend fun addMember(groupId: Long, userName: String) {
+        val response = client.post("$API_URL/api/groups/$groupId/members") {
+            headers {
+                append(HttpHeaders.Authorization, "Bearer $authToken")
+            }
+            setBody(userName)
+        }
+        if(response.status != HttpStatusCode.OK) {
+            println("Member could not be added")
+        } else {
+            println("Member $userName was added")
+        }
+    }
+
+    suspend fun logOut() {
         dataStore.edit {
             it.clear()
         }

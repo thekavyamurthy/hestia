@@ -1,5 +1,7 @@
 package me.kavyamurthy.hestia
 
+import Conversation
+import ConversationType
 import CreateUserReq
 import LoginRequest
 import LoginResponse
@@ -24,6 +26,7 @@ import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -37,11 +40,14 @@ import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import me.kavyamurthy.hestia.db.ConversationMembers
-import me.kavyamurthy.hestia.db.Conversations
+import me.kavyamurthy.hestia.db.DirectConversations
 import me.kavyamurthy.hestia.db.DirectMessages
+import me.kavyamurthy.hestia.db.Groups
 import me.kavyamurthy.hestia.db.Login.login
 import me.kavyamurthy.hestia.db.Login.loginExists
+import me.kavyamurthy.hestia.db.Messages
+import me.kavyamurthy.hestia.db.Spaces
+import me.kavyamurthy.hestia.db.Users
 import me.kavyamurthy.hestia.db.Users.createUser
 import me.kavyamurthy.hestia.db.Users.userExists
 import org.jetbrains.exposed.sql.Database
@@ -52,6 +58,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Collections
 
 private val logger = LoggerFactory.getLogger("HestiaServer")
+private val connections = Collections.synchronizedSet<Connection?>(LinkedHashSet())
 
 fun main() {
     Database.connect(config.db.url, user = config.db.username, password = config.db.password)
@@ -97,7 +104,6 @@ fun Application.module() {
 
 
     routing {
-        val connections = Collections.synchronizedSet<Connection?>(LinkedHashSet())
 
         staticResources("/", "website", index = "index.html")
 
@@ -167,54 +173,128 @@ fun Application.module() {
         }
 
         authenticate ("auth-jwt") {
+            get("/api/groups") {
+                val principal = call.principal<JWTPrincipal>()
+                val userId = principal!!.payload.getClaim("userId").asInt()
+                val groupList = Groups.getGroupList(userId)
+                call.respond(groupList)
+            }
+
+            get("/api/groups/{id}/members") {
+                val groupId = call.parameters["id"]?.toLong()
+                    ?: throw IllegalArgumentException("Group ID not specified")
+                val members = Groups.getMembers(groupId)
+                call.respond(members)
+            }
+
+            post("/api/groups/{id}/members") {
+                val groupId = call.parameters["id"]?.toLong()
+                    ?: throw IllegalArgumentException("Group ID not specified")
+
+                val otherUserName = call.receive<String>()
+                val otherUser = Users.lookupUser(otherUserName)
+                if (otherUser == null) {
+                    call.respond(HttpStatusCode.BadRequest)
+                } else {
+                    Groups.addMember(groupId, otherUser.id)
+                }
+                call.respond(HttpStatusCode.OK)
+            }
+
+            get("/api/spaces") {
+                val principal = call.principal<JWTPrincipal>()
+                val userId = principal!!.payload.getClaim("userId").asInt()
+                val spaceList = Spaces.getSpaces(userId)
+                call.respond(spaceList)
+            }
+
             get("/api/conversations") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.getClaim("userId").asInt()
-                val convList = Conversations.getConvList(userId)
+                val convList = DirectConversations.getConvList(userId)
                 call.respond(convList)
             }
 
-            get("/api/conversation/{id}") {
+            post("/api/newConversation") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.getClaim("userId").asInt()
-                val id = call.parameters["id"]?.toLong()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
+                val otherUserName = call.receive<String>()
+                val otherUser = Users.lookupUser(otherUserName)
+                if (otherUser == null) {
+                    call.respond(HttpStatusCode.BadRequest)
                 } else {
-                    call.respond(DirectMessages.getMessages(id))
+                    val convId = DirectConversations.getOrAddConv(userId, otherUser.id)
+                    call.respond(Conversation(otherUser.displayName, convId, ConversationType.DIRECT))
+                }
+            }
+
+            get("/api/conversation/{type}/{id}") {
+                try {
+//                    val principal = call.principal<JWTPrincipal>()
+//                    val userId = principal!!.payload.getClaim("userId").asInt()
+                    val convType = call.parameters["type"]
+                        ?.let { ConversationType.valueOf(it) }
+                        ?: throw IllegalArgumentException("Conversation type not specified")
+
+                    val convId = call.parameters["id"]?.toLong()
+                        ?: throw IllegalArgumentException("Conversation ID not specified")
+
+                    val messages = when (convType) {
+                        ConversationType.DIRECT -> DirectMessages.getMessages(convId)
+                        ConversationType.SPACE ->  Messages.getMessages(convId)
+                    }
+                    call.respond(messages)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, e.message ?: "Illegal argument")
                 }
             }
 
             webSocket("/chat/{id}") {
-                val principal = call.principal<JWTPrincipal>()
-                val userId = principal!!.payload.getClaim("userId").asInt()
-                val thisConnection = Connection(this, userId)
-                connections += thisConnection
-                val convId = call.parameters["id"]?.toLong()
-
-                if (convId == null) {
-                    call.respond(HttpStatusCode.BadRequest, "conversation id not specified")
-                } else {
-                    val userList = ConversationMembers.getMembers(convId).toMutableSet()
-                    userList.remove(userId)
-
-                    try {
-                        while (true) {
-                            val msg = receiveDeserialized<Message>()
-                            connections.forEach {
-                                if (it.userId in userList)
-                                    (it.session as WebSocketServerSession).sendSerialized(msg)
-                                DirectMessages.add(userId, msg)
-                            }
-                        }
-                    } catch (_: ClosedReceiveChannelException) {
-                    } catch (e: Exception) {
-                        logger.error("Error in chat", e)
-                    } finally {
-                        connections -= thisConnection
-                    }
+                try {
+                    chatConnection(this)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, e.message ?: "Illegal argument")
                 }
             }
         }
+    }
+}
+
+private suspend fun Route.chatConnection(session: WebSocketServerSession) {
+    val principal = session.call.principal<JWTPrincipal>() ?: throw IllegalArgumentException("Auth principal not found")
+    val userId = principal.payload.getClaim("userId").asInt()
+    val thisConnection = Connection(session, userId)
+    connections += thisConnection
+
+    val convId = session.call.parameters["id"]?.toLong() ?: throw IllegalArgumentException("Conversation ID not specified")
+
+
+
+    try {
+        while (true) {
+            val msg = session.receiveDeserialized<Message>()
+            logger.info(msg.convType.toString())
+
+            val userList = when(msg.convType) {
+                ConversationType.DIRECT -> DirectConversations.getMembers(convId)
+                ConversationType.SPACE ->  Spaces.getMembers(convId)
+            }.filter { it != userId }.toMutableSet()
+
+            logger.info(userList.toString())
+
+            connections.forEach {
+                if (it.userId in userList)
+                    (it.session as WebSocketServerSession).sendSerialized(msg)
+                when (msg.convType) {
+                    ConversationType.DIRECT -> DirectMessages.add(userId, msg)
+                    ConversationType.SPACE -> Messages.add(userId, msg)
+                }
+            }
+        }
+    } catch (_: ClosedReceiveChannelException) {
+    } catch (e: Exception) {
+        logger.error("Error in chat", e)
+    } finally {
+        connections -= thisConnection
     }
 }

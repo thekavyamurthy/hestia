@@ -1,12 +1,17 @@
 
 
+import Screen.AddMemberScreen
 import Screen.ChatScreen
 import Screen.ConvScreen
+import Screen.GroupDetailScreen
+import Screen.GroupScreen
 import Screen.LoadingScreen
 import Screen.LoginScreen
-import Screen.SignupScreen1
-import Screen.SignupScreen2
-import Screen.SignupScreen3
+import Screen.NewConvScreen
+import Screen.SpaceScreen
+import Screen.signupScreens.SignupScreen1
+import Screen.signupScreens.SignupScreen2
+import Screen.signupScreens.SignupScreen3
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,7 +35,12 @@ fun App(dataStore: DataStore<Preferences>) {
             SignupScreen2,
             SignupScreen3,
             ConvScreen,
+            NewConvScreen,
             ChatScreen,
+            SpaceScreen,
+            GroupScreen,
+            GroupDetailScreen,
+            AddMemberScreen
         ),
         startDestinationNavArgs = dataStore
     )

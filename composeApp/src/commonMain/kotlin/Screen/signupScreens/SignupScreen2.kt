@@ -1,4 +1,4 @@
-package Screen
+package Screen.signupScreens
 
 import APIClient
 import androidx.compose.foundation.clickable
@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,16 +24,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.composegears.tiamat.navArgs
 import com.composegears.tiamat.navController
 import com.composegears.tiamat.navDestination
 import kotlinx.coroutines.launch
 
-val SignupScreen1 by navDestination<Unit> {
-    val navController = navController()
-
-    var email by remember { mutableStateOf("") }
+val SignupScreen2 by navDestination<String> {
     val scope = rememberCoroutineScope()
-    var enabled by rememberSaveable{ mutableStateOf(true)}
+    val navController = navController()
+    val email = navArgs()
+    var code by remember { mutableStateOf("") }
     var isVisible by remember { mutableStateOf(false) }
 
 
@@ -45,23 +44,21 @@ val SignupScreen1 by navDestination<Unit> {
             .padding(horizontal = 30.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        //email
         Row {
             TextField(
-                value = email,
-                onValueChange = { email = it },
+                value = code,
+                onValueChange = { code = it },
                 Modifier.padding(10.dp),
-                placeholder = { Text("Enter your email") })
+                placeholder = { Text("Enter the verification code sent to your email") })
         }
 
         Row {
             Button(onClick = {
                 scope.launch {
-                    if(APIClient.sendCode(email)) {
-                        navController.navigate(SignupScreen2, email)
+                    if(APIClient.verifyCode(email, code.toInt())) {
+                        navController.navigate(SignupScreen3)
                     } else {
                         isVisible = true
-                        println("Email in use already")
                     }
                 }
             }) {
@@ -72,20 +69,29 @@ val SignupScreen1 by navDestination<Unit> {
         Row {
             if(isVisible) {
                 Text(
-                    text = buildAnnotatedString {
-                        append("Looks like you already have an account with us. Would you like to ")
-                        withStyle(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)) {
-                            append("log in ")
-                        }
-                        append("instead?")
-                    },
-                    modifier = Modifier.clickable(enabled = enabled) {
-                        enabled = false
-                        navController.back()
-                    },
+                    text = "Incorrect code.",
+                    color = Color.Red,
                     textAlign = TextAlign.Center
                 )
             }
+        }
+
+        Row {
+            Text(
+                text = buildAnnotatedString {
+                    append("Didn't receive a code? ")
+                    withStyle(style = SpanStyle(color = Color.Blue, textDecoration = TextDecoration.Underline)) {
+                        append("Send another")
+                    }
+                    append(".")
+                },
+                modifier = Modifier.clickable {
+                    scope.launch {
+                        APIClient.sendCode(email)
+                    }
+                },
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

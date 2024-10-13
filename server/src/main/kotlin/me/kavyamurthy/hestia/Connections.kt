@@ -1,7 +1,5 @@
 package me.kavyamurthy.hestia
 
-import io.ktor.websocket.DefaultWebSocketSession
+import io.ktor.websocket.WebSocketSession
 
-class Connection(val session: DefaultWebSocketSession, val userId: Int) {
-//    val store = ConversationStore(user)
-}
+class Connection(val session: WebSocketSession, val userId: Int)
